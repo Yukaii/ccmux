@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Bun
+bun.lockb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+
+# Test coverage
+coverage/
+
+# Pack output
+*.tgz
+
+# Claude Code harness runtime state
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks/
+
+# Benchmark artifacts
+scripts/bench-results/
+
+# Local-only tooling
+.claude/settings.local.json

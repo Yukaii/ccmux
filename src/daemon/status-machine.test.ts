@@ -1,0 +1,1009 @@
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import {
+  createInitialState,
+  processEntry,
+  deriveStateFromEntries,
+  resolveDeadProcessState,
+  getEffectiveStatus,
+} from "./status-machine";
+import {
+  clearPermissionCache,
+  _setGlobalSettingsDir,
+} from "../lib/permission-resolver";
+import { mkdtempSync, writeFileSync, rmSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
+import type {
+  LogEntry,
+  ProgressLogEntry,
+  AssistantLogEntry,
+  UserLogEntry,
+  ResultLogEntry,
+  SummaryLogEntry,
+  SystemLogEntry,
+} from "../types";
+import type { Session } from "../types/session";
+
+describe("status-machine", () => {
+  let testCwd: string;
+  let globalDir: string;
+
+  beforeEach(() => {
+    clearPermissionCache();
+    testCwd = mkdtempSync(join(tmpdir(), "sm-test-"));
+    globalDir = mkdtempSync(join(tmpdir(), "sm-global-"));
+    _setGlobalSettingsDir(globalDir);
+    // Settings that allow commonly auto-approved tools
+    writeFileSync(
+      join(globalDir, "settings.json"),
+      JSON.stringify({
+        permissions: {
+          allow: [
+            "Read",
+            "Glob",
+            "Grep",
+            "Task",
+            "ExitPlanMode",
+            "AskUserQuestion",
+            "EnterPlanMode",
+          ],
+        },
+      }),
+    );
+  });
+
+  afterEach(() => {
+    _setGlobalSettingsDir(null);
+    rmSync(testCwd, { recursive: true, force: true });
+    rmSync(globalDir, { recursive: true, force: true });
+  });
+
+  describe("createInitialState", () => {
+    it("should create idle state", () => {
+      const state = createInitialState();
+      expect(state.status).toBe("idle");
+      expect(state.attentionType).toBeNull();
+      expect(state.pendingTool).toBeNull();
+      expect(state.inPlanMode).toBe(false);
+    });
+
+    it("should have undefined lastUserInputAt", () => {
+      const state = createInitialState();
+      expect(state.lastUserInputAt).toBeUndefined();
+    });
+  });
+
+  describe("processEntry", () => {
+    it("should handle SessionStart", () => {
+      const entry: ProgressLogEntry = {
+        type: "progress",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        progress: { type: "SessionStart" },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("idle");
+    });
+
+    it("should handle SessionEnd", () => {
+      const entry: ProgressLogEntry = {
+        type: "progress",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        progress: { type: "SessionEnd" },
+      };
+
+      const workingState = {
+        ...createInitialState(),
+        status: "working" as const,
+      };
+      const state = processEntry(entry, workingState);
+      expect(state.status).toBe("idle");
+    });
+
+    it("should handle result entry", () => {
+      const entry: ResultLogEntry = {
+        type: "result",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        result: { type: "success" },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("idle");
+      expect(state.attentionType).toBeNull();
+    });
+
+    it("should handle assistant with permission-required tool", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool1",
+              name: "Bash",
+              input: { command: "ls" },
+            },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("permission");
+      expect(state.pendingTool).toBe("Bash");
+    });
+
+    it("should handle assistant with auto-approved tool", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool1",
+              name: "Read",
+              input: { file_path: "/test" },
+            },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, {
+        ...createInitialState(),
+        cwd: testCwd,
+      });
+      expect(state.status).toBe("working");
+      expect(state.attentionType).toBeNull();
+    });
+
+    it("should handle EnterPlanMode", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool1",
+              name: "EnterPlanMode",
+              input: {},
+            },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.inPlanMode).toBe(true);
+    });
+
+    it("should handle ExitPlanMode as waiting with plan_approval attention", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool1",
+              name: "ExitPlanMode",
+              input: {},
+            },
+          ],
+        },
+      };
+
+      const initialState = {
+        ...createInitialState(),
+        inPlanMode: true,
+        cwd: testCwd,
+      };
+      const state = processEntry(entry, initialState);
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("plan_approval");
+      expect(state.pendingTool).toBe("ExitPlanMode");
+      // inPlanMode should stay true until user responds
+      expect(state.inPlanMode).toBe(true);
+    });
+
+    it("should exit plan mode when user responds after ExitPlanMode", () => {
+      const userEntry: UserLogEntry = {
+        type: "user",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "user",
+          content: "Approved",
+        },
+      };
+
+      // State after ExitPlanMode was called
+      const waitingState = {
+        ...createInitialState(),
+        status: "waiting" as const,
+        attentionType: "plan_approval" as const,
+        pendingTool: "ExitPlanMode",
+        inPlanMode: true,
+      };
+
+      const state = processEntry(userEntry, waitingState);
+      expect(state.status).toBe("working");
+      expect(state.inPlanMode).toBe(false);
+      expect(state.pendingTool).toBeNull();
+    });
+
+    it("should handle user message", () => {
+      const entry: UserLogEntry = {
+        type: "user",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "user",
+          content: "Hello",
+        },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("working");
+    });
+
+    it("should set lastUserInputAt on user message", () => {
+      const entry: UserLogEntry = {
+        type: "user",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T12:30:00Z",
+        message: {
+          role: "user",
+          content: "Hello",
+        },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.lastUserInputAt).toBe("2024-01-01T12:30:00Z");
+      expect(state.lastActivityAt).toBe("2024-01-01T12:30:00Z");
+    });
+
+    it("should NOT set lastUserInputAt on tool results", () => {
+      const entry: UserLogEntry = {
+        type: "user",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T12:30:00Z",
+        message: {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "tool1",
+              content: "result data",
+            },
+          ],
+        },
+      };
+
+      const initialState = {
+        ...createInitialState(),
+        lastUserInputAt: "2024-01-01T12:00:00Z",
+      };
+
+      const state = processEntry(entry, initialState);
+      expect(state.lastUserInputAt).toBe("2024-01-01T12:00:00Z");
+      expect(state.lastActivityAt).toBe("2024-01-01T12:30:00Z");
+    });
+
+    it("should preserve lastUserInputAt through assistant entries", () => {
+      const userEntry: UserLogEntry = {
+        type: "user",
+        uuid: "1",
+        parentUuid: null,
+        timestamp: "2024-01-01T12:00:00Z",
+        message: { role: "user", content: "Hello" },
+      };
+
+      const assistantEntry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "2",
+        parentUuid: null,
+        timestamp: "2024-01-01T12:01:00Z",
+        message: {
+          role: "assistant",
+          content: [{ type: "tool_use", id: "t1", name: "Read", input: {} }],
+        },
+      };
+
+      let state = processEntry(userEntry, createInitialState());
+      expect(state.lastUserInputAt).toBe("2024-01-01T12:00:00Z");
+
+      state = processEntry(assistantEntry, state);
+      expect(state.lastUserInputAt).toBe("2024-01-01T12:00:00Z");
+      expect(state.lastActivityAt).toBe("2024-01-01T12:01:00Z");
+    });
+
+    it("should handle AskUserQuestion as waiting with question attention", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool1",
+              name: "AskUserQuestion",
+              input: { questions: [] },
+            },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, {
+        ...createInitialState(),
+        cwd: testCwd,
+      });
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("question");
+      expect(state.pendingTool).toBe("AskUserQuestion");
+    });
+
+    it("should handle assistant end_turn with no tools as idle", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "Here is my response" }],
+          stop_reason: "end_turn",
+        },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("idle");
+      expect(state.attentionType).toBeNull();
+    });
+
+    it("should handle summary entry as idle", () => {
+      const entry: SummaryLogEntry = {
+        type: "summary",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        summary: "Conversation summary...",
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("idle");
+      expect(state.attentionType).toBeNull();
+      expect(state.pendingTool).toBeNull();
+      expect(state.inPlanMode).toBe(false);
+    });
+
+    it("should transition to idle from plan_approval when summary received", () => {
+      const entry: SummaryLogEntry = {
+        type: "summary",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        summary: "Conversation summary...",
+      };
+
+      // State after ExitPlanMode - waiting for approval
+      const waitingState = {
+        ...createInitialState(),
+        status: "waiting" as const,
+        attentionType: "plan_approval" as const,
+        pendingTool: "ExitPlanMode",
+        inPlanMode: true,
+      };
+
+      const state = processEntry(entry, waitingState);
+      expect(state.status).toBe("idle");
+      expect(state.attentionType).toBeNull();
+      expect(state.pendingTool).toBeNull();
+      expect(state.inPlanMode).toBe(false);
+    });
+
+    it("should handle queue-operation enqueue as working", () => {
+      const entry = {
+        type: "queue-operation" as const,
+        operation: "enqueue" as const,
+        timestamp: "2024-01-01T00:00:00Z",
+        sessionId: "test-session",
+        content: "user input",
+      };
+
+      const idleState = createInitialState();
+      const state = processEntry(entry, idleState);
+      expect(state.status).toBe("working");
+      expect(state.attentionType).toBeNull();
+      expect(state.pendingTool).toBeNull();
+    });
+
+    it("should handle queue-operation dequeue without changing status", () => {
+      const entry = {
+        type: "queue-operation" as const,
+        operation: "dequeue" as const,
+        timestamp: "2024-01-01T00:00:00Z",
+        sessionId: "test-session",
+      };
+
+      const workingState = {
+        ...createInitialState(),
+        status: "working" as const,
+      };
+      const state = processEntry(entry, workingState);
+      expect(state.status).toBe("working");
+    });
+  });
+
+  describe("deriveStateFromEntries", () => {
+    it("should derive state from multiple entries", () => {
+      const entries: LogEntry[] = [
+        {
+          type: "progress",
+          uuid: "1",
+          parentUuid: null,
+          timestamp: "2024-01-01T00:00:00Z",
+          progress: { type: "SessionStart" },
+        },
+        {
+          type: "user",
+          uuid: "2",
+          parentUuid: null,
+          timestamp: "2024-01-01T00:00:01Z",
+          message: { role: "user", content: "Hello" },
+        },
+        {
+          type: "assistant",
+          uuid: "3",
+          parentUuid: null,
+          timestamp: "2024-01-01T00:00:02Z",
+          message: {
+            role: "assistant",
+            content: [{ type: "tool_use", id: "t1", name: "Bash", input: {} }],
+          },
+        },
+      ];
+
+      const state = deriveStateFromEntries(entries);
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("permission");
+      expect(state.pendingTool).toBe("Bash");
+    });
+  });
+
+  describe("resolveDeadProcessState", () => {
+    it("should reset working session to idle when process is dead", () => {
+      const state = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Read",
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      const result = resolveDeadProcessState(state, false);
+      expect(result.status).toBe("idle");
+      expect(result.attentionType).toBeNull();
+      expect(result.pendingTool).toBeNull();
+    });
+
+    it("should keep working session when process is alive", () => {
+      const state = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Read",
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      const result = resolveDeadProcessState(state, true);
+      expect(result.status).toBe("working");
+      expect(result.pendingTool).toBe("Read");
+    });
+
+    it("should never modify waiting sessions regardless of PID", () => {
+      const state = {
+        ...createInitialState(),
+        status: "waiting" as const,
+        attentionType: "permission" as const,
+        pendingTool: "Bash",
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      expect(resolveDeadProcessState(state, false).status).toBe("waiting");
+      expect(resolveDeadProcessState(state, true).status).toBe("waiting");
+      expect(resolveDeadProcessState(state, null).status).toBe("waiting");
+    });
+
+    it("should never modify idle sessions", () => {
+      const state = {
+        ...createInitialState(),
+        status: "idle" as const,
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      expect(resolveDeadProcessState(state, false).status).toBe("idle");
+      expect(resolveDeadProcessState(state, null).status).toBe("idle");
+    });
+
+    it("should reset to idle when no PID and log file is old (>10min)", () => {
+      const oldMtime = Date.now() - 11 * 60 * 1000;
+      const state = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Read",
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      const result = resolveDeadProcessState(state, null, oldMtime);
+      expect(result.status).toBe("idle");
+      expect(result.pendingTool).toBeNull();
+    });
+
+    it("should keep working when no PID but log file is recent", () => {
+      const recentMtime = Date.now() - 1000;
+      const state = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Read",
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      const result = resolveDeadProcessState(state, null, recentMtime);
+      expect(result.status).toBe("working");
+      expect(result.pendingTool).toBe("Read");
+    });
+
+    it("should reset to idle when no PID and log file is missing (null mtime)", () => {
+      // Regression for the far-future sentinel bypass: `Bun.file().lastModified`
+      // returns 2 ** 52 - 1 for a missing file, which `readLogFileMtime`
+      // normalizes to null. Null means the log will never append again, so
+      // the safety net must idle instead of treating it as fresh activity.
+      const state = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Read",
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      const result = resolveDeadProcessState(state, null, null);
+      expect(result.status).toBe("idle");
+      expect(result.pendingTool).toBeNull();
+    });
+
+    it("should keep working when no PID and no mtime provided", () => {
+      const state = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Read",
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      const result = resolveDeadProcessState(state, null);
+      expect(result.status).toBe("working");
+    });
+
+    it("should clear pendingTaskIds and hasActiveSubagent on dead process", () => {
+      const state = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Task",
+        hasActiveSubagent: true,
+        pendingTaskIds: ["task1", "task2"],
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      const result = resolveDeadProcessState(state, false);
+      expect(result.status).toBe("idle");
+      expect(result.pendingTaskIds).toBeUndefined();
+      expect(result.hasActiveSubagent).toBe(false);
+    });
+
+    it("should clear pendingTaskIds on no-PID safety net timeout", () => {
+      const oldMtime = Date.now() - 11 * 60 * 1000;
+      const state = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Task",
+        hasActiveSubagent: true,
+        pendingTaskIds: ["task1"],
+        lastActivityAt: new Date().toISOString(),
+      };
+
+      const result = resolveDeadProcessState(state, null, oldMtime);
+      expect(result.status).toBe("idle");
+      expect(result.pendingTaskIds).toBeUndefined();
+      expect(result.hasActiveSubagent).toBe(false);
+    });
+  });
+
+  describe("Bug 1: Sibling tool tracking with early returns", () => {
+    it("should detect waiting when Bash appears before Task in same message", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "t1",
+              name: "Bash",
+              input: { command: "ls" },
+            },
+            { type: "tool_use", id: "t2", name: "Task", input: {} },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("permission");
+      expect(state.pendingToolIds).toContain("t1");
+    });
+
+    it("should detect waiting when Bash appears before ExitPlanMode in same message", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "t1",
+              name: "Bash",
+              input: { command: "ls" },
+            },
+            { type: "tool_use", id: "t2", name: "ExitPlanMode", input: {} },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, {
+        ...createInitialState(),
+        inPlanMode: true,
+      });
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("permission");
+      expect(state.pendingToolIds).toContain("t1");
+    });
+
+    it("should detect waiting when Bash appears before AskUserQuestion in same message", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", id: "t1", name: "Write", input: {} },
+            { type: "tool_use", id: "t2", name: "AskUserQuestion", input: {} },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("permission");
+      expect(state.pendingToolIds).toContain("t1");
+    });
+
+    it("should track Task IDs alongside permission tool IDs", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", id: "t1", name: "Bash", input: {} },
+            { type: "tool_use", id: "t2", name: "Task", input: {} },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.pendingTaskIds).toContain("t2");
+      expect(state.hasActiveSubagent).toBe(true);
+    });
+  });
+
+  describe("Bug 2: bash_progress clearing unrelated waiting", () => {
+    it("should transition to working on bash_progress from idle", () => {
+      const entry: ProgressLogEntry = {
+        type: "progress",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        data: { type: "bash_progress", output: "" },
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.status).toBe("working");
+      expect(state.pendingTool).toBe("Bash");
+    });
+
+    it("should NOT clear waiting state when bash_progress arrives for non-Bash pending tool", () => {
+      const entry: ProgressLogEntry = {
+        type: "progress",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        data: { type: "bash_progress", output: "" },
+      };
+
+      const waitingForWrite = {
+        ...createInitialState(),
+        status: "waiting" as const,
+        attentionType: "permission" as const,
+        pendingTool: "Write",
+        pendingToolIds: ["w1"],
+      };
+
+      const state = processEntry(entry, waitingForWrite);
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("permission");
+      expect(state.pendingTool).toBe("Write");
+    });
+  });
+
+  describe("Bug 4: Summary lastActivityAt", () => {
+    it("should update lastActivityAt on summary entry", () => {
+      const entry: SummaryLogEntry = {
+        type: "summary",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T12:00:00Z",
+        summary: "Conversation summary...",
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.lastActivityAt).toBe("2024-01-01T12:00:00Z");
+    });
+  });
+
+  describe("Coverage: permission + auto-approved mix", () => {
+    it("should preserve waiting when auto-approved tool follows permission tool", () => {
+      const entry: AssistantLogEntry = {
+        type: "assistant",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", id: "t1", name: "Bash", input: {} },
+            { type: "tool_use", id: "t2", name: "Read", input: {} },
+          ],
+        },
+      };
+
+      const state = processEntry(entry, {
+        ...createInitialState(),
+        cwd: testCwd,
+      });
+      expect(state.status).toBe("waiting");
+      expect(state.attentionType).toBe("permission");
+      expect(state.pendingToolIds).toEqual(["t1"]);
+    });
+  });
+
+  describe("Coverage: tool result clears pendingTaskIds", () => {
+    it("should clear pendingTaskIds when Task tool result arrives", () => {
+      const userEntry: UserLogEntry = {
+        type: "user",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: "task1", content: "done" },
+          ],
+        },
+      };
+
+      const stateWithTask = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Task",
+        hasActiveSubagent: true,
+        pendingTaskIds: ["task1"],
+      };
+
+      const state = processEntry(userEntry, stateWithTask);
+      expect(state.pendingTaskIds).toBeUndefined();
+      expect(state.hasActiveSubagent).toBe(false);
+    });
+
+    it("should keep remaining pendingTaskIds when only some complete", () => {
+      const userEntry: UserLogEntry = {
+        type: "user",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T00:00:00Z",
+        message: {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: "task1", content: "done" },
+          ],
+        },
+      };
+
+      const stateWithTasks = {
+        ...createInitialState(),
+        status: "working" as const,
+        pendingTool: "Task",
+        hasActiveSubagent: true,
+        pendingTaskIds: ["task1", "task2"],
+      };
+
+      const state = processEntry(userEntry, stateWithTasks);
+      expect(state.pendingTaskIds).toEqual(["task2"]);
+      expect(state.hasActiveSubagent).toBe(true);
+    });
+  });
+
+  describe("Coverage: getEffectiveStatus", () => {
+    const baseSession: Session = {
+      id: "test",
+      agentType: "claude",
+      trackingMode: "native",
+      nativeSessionId: "test",
+      project: "test",
+      cwd: "/test",
+      logPath: "/test.jsonl",
+      status: "working",
+      attentionType: null,
+      pendingTool: null,
+      inPlanMode: false,
+      tmuxPane: null,
+      updatedAt: new Date(),
+      lastActivityAt: null,
+      lastUserInputAt: null,
+      subagents: [],
+      gitBranch: null,
+      version: null,
+      pid: null,
+      statusChangedAt: null,
+      previousStatus: null,
+      attentionState: null,
+      lastSeenAt: null,
+      lastPrompt: null,
+    };
+
+    it("should return session status when no subagents are waiting", () => {
+      const result = getEffectiveStatus(baseSession);
+      expect(result.status).toBe("working");
+      expect(result.fromSubagent).toBe(false);
+    });
+
+    it("should return permission from subagent when subagent is waiting for permission", () => {
+      const session: Session = {
+        ...baseSession,
+        subagents: [
+          {
+            agentId: "sub1",
+            status: "waiting",
+            attentionType: "permission",
+            pendingTool: "Bash",
+            lastActivityAt: null,
+          },
+        ],
+      };
+      const result = getEffectiveStatus(session);
+      expect(result.status).toBe("waiting");
+      expect(result.attentionType).toBe("permission");
+      expect(result.fromSubagent).toBe(true);
+    });
+
+    it("should return question from subagent when subagent is waiting for question", () => {
+      const session: Session = {
+        ...baseSession,
+        subagents: [
+          {
+            agentId: "sub1",
+            status: "waiting",
+            attentionType: "question",
+            pendingTool: "AskUserQuestion",
+            lastActivityAt: null,
+          },
+        ],
+      };
+      const result = getEffectiveStatus(session);
+      expect(result.status).toBe("waiting");
+      expect(result.attentionType).toBe("question");
+      expect(result.fromSubagent).toBe(true);
+    });
+
+    it("should prioritize permission over question across subagents", () => {
+      const session: Session = {
+        ...baseSession,
+        subagents: [
+          {
+            agentId: "sub1",
+            status: "waiting",
+            attentionType: "question",
+            pendingTool: "AskUserQuestion",
+            lastActivityAt: null,
+          },
+          {
+            agentId: "sub2",
+            status: "waiting",
+            attentionType: "permission",
+            pendingTool: "Bash",
+            lastActivityAt: null,
+          },
+        ],
+      };
+      const result = getEffectiveStatus(session);
+      expect(result.status).toBe("waiting");
+      expect(result.attentionType).toBe("permission");
+      expect(result.fromSubagent).toBe(true);
+    });
+  });
+
+  describe("Coverage: unknown entry types", () => {
+    it("should update lastActivityAt for unknown entry type", () => {
+      const entry: LogEntry = {
+        type: "unknown_type",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T12:00:00Z",
+      };
+
+      const state = processEntry(entry, createInitialState());
+      expect(state.lastActivityAt).toBe("2024-01-01T12:00:00Z");
+      expect(state.status).toBe("idle");
+    });
+
+    it("should preserve status for unknown system subtype", () => {
+      const entry: SystemLogEntry = {
+        type: "system",
+        uuid: "123",
+        parentUuid: null,
+        timestamp: "2024-01-01T12:00:00Z",
+        subtype: "unknown_subtype",
+      };
+
+      const workingState = {
+        ...createInitialState(),
+        status: "working" as const,
+      };
+      const state = processEntry(entry, workingState);
+      expect(state.status).toBe("working");
+      expect(state.lastActivityAt).toBe("2024-01-01T12:00:00Z");
+    });
+  });
+});

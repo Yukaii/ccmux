@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 580" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9399B2"/>
+    </marker>
+  </defs>
+
+  <text x="30" y="34" font-size="13" fill="#A6ADC8" font-weight="700" letter-spacing="2">STATUS DETECTION CASCADE</text>
+  <text x="30" y="52" font-size="10" fill="#9399B2" font-style="italic">per session, every reconcile tick (5 s)</text>
+
+  <line x1="425" y1="80" x2="425" y2="540" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+
+  <text x="225" y="90" text-anchor="middle" font-size="11" fill="#A6ADC8" font-weight="700" letter-spacing="2">NATIVE TRACKING</text>
+  <text x="225" y="106" text-anchor="middle" font-size="10" fill="#9399B2" font-style="italic">Claude with hooks installed</text>
+
+  <rect x="70" y="125" width="310" height="48" rx="6" fill="#89B4FA"/>
+  <text x="225" y="148" text-anchor="middle" font-size="13" fill="#11111B" font-weight="700">JSONL log entries</text>
+  <text x="225" y="164" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">~/.claude/projects/&lt;path&gt;/&lt;sessionId&gt;.jsonl</text>
+
+  <line x1="225" y1="173" x2="225" y2="200" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="70" y="205" width="310" height="48" rx="6" fill="#CBA6F7"/>
+  <text x="225" y="228" text-anchor="middle" font-size="13" fill="#11111B" font-weight="700">status-machine.ts</text>
+  <text x="225" y="244" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">processEntry(): JSONL → state transitions</text>
+
+  <line x1="225" y1="253" x2="225" y2="280" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="70" y="285" width="310" height="60" rx="6" fill="#FAB387"/>
+  <text x="225" y="310" text-anchor="middle" font-size="14" fill="#11111B" font-weight="700">session.status</text>
+  <text x="225" y="328" text-anchor="middle" font-size="11" fill="#11111B">idle  ·  working  ·  waiting</text>
+
+  <rect x="70" y="360" width="310" height="145" rx="6" fill="#1E1E2E" stroke="#45475A" stroke-width="1"/>
+  <text x="225" y="380" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">transitions</text>
+  <text x="225" y="400" text-anchor="middle" font-size="10" fill="#9399B2">tool_use  →  working[tool]</text>
+  <text x="225" y="416" text-anchor="middle" font-size="10" fill="#9399B2">permission tool  →  waiting[permission]</text>
+  <text x="225" y="432" text-anchor="middle" font-size="10" fill="#9399B2">ExitPlanMode  →  waiting[plan_approval]</text>
+  <text x="225" y="448" text-anchor="middle" font-size="10" fill="#9399B2">AskUserQuestion  →  waiting[question]</text>
+  <text x="225" y="464" text-anchor="middle" font-size="10" fill="#9399B2">result / SessionEnd  →  idle</text>
+  <text x="225" y="490" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">subagents (Task)  →  parent silent until child resolves</text>
+
+  <text x="225" y="555" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">src/daemon/status-machine.ts</text>
+
+  <text x="850" y="90" text-anchor="middle" font-size="11" fill="#A6ADC8" font-weight="700" letter-spacing="2">PANE-TRACKED MODE</text>
+  <text x="850" y="106" text-anchor="middle" font-size="10" fill="#9399B2" font-style="italic">every other agent  ·  Claude before hook fires</text>
+
+  <rect x="445" y="125" width="265" height="70" rx="6" fill="#89B4FA"/>
+  <text x="577" y="148" text-anchor="middle" font-size="12" fill="#11111B" font-weight="700">marker file</text>
+  <text x="577" y="166" text-anchor="middle" font-size="9" fill="#11111B">state, state_timestamp,</text>
+  <text x="577" y="180" text-anchor="middle" font-size="9" fill="#11111B">pending_tool, permission_context</text>
+
+  <rect x="725" y="125" width="245" height="70" rx="6" fill="#89B4FA"/>
+  <text x="847" y="148" text-anchor="middle" font-size="12" fill="#11111B" font-weight="700">log adapter</text>
+  <text x="847" y="166" text-anchor="middle" font-size="9" fill="#11111B">lastActivityAt</text>
+  <text x="847" y="180" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">if log file is known</text>
+
+  <rect x="985" y="125" width="270" height="70" rx="6" fill="#89B4FA"/>
+  <text x="1120" y="148" text-anchor="middle" font-size="12" fill="#11111B" font-weight="700">terminal rules</text>
+  <text x="1120" y="166" text-anchor="middle" font-size="9" fill="#11111B">regex on capture-pane</text>
+  <text x="1120" y="180" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">last 30 lines, ANSI-stripped</text>
+
+  <line x1="577" y1="195" x2="577" y2="220" stroke="#9399B2" stroke-width="1.5"/>
+  <line x1="847" y1="195" x2="847" y2="220" stroke="#9399B2" stroke-width="1.5"/>
+  <line x1="1120" y1="195" x2="1120" y2="220" stroke="#9399B2" stroke-width="1.5"/>
+  <line x1="577" y1="220" x2="1120" y2="220" stroke="#9399B2" stroke-width="1.5"/>
+  <line x1="850" y1="220" x2="850" y2="240" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="445" y="245" width="810" height="50" rx="6" fill="#CBA6F7"/>
+  <text x="850" y="268" text-anchor="middle" font-size="13" fill="#11111B" font-weight="700">StateReconciler  ·  evaluateCascade()</text>
+  <text x="850" y="285" text-anchor="middle" font-size="10" fill="#11111B" font-style="italic">freshest source wins  ·  tie-break marker &gt; log &gt; terminal</text>
+
+  <line x1="577" y1="295" x2="577" y2="320" stroke="#9399B2" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="847" y1="295" x2="847" y2="320" stroke="#9399B2" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="1120" y1="295" x2="1120" y2="320" stroke="#9399B2" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="445" y="325" width="265" height="115" rx="6" fill="#F9E2AF"/>
+  <text x="577" y="348" text-anchor="middle" font-size="11" fill="#11111B" font-weight="700">marker fresher</text>
+  <text x="577" y="367" text-anchor="middle" font-size="10" fill="#11111B">marker.state wins</text>
+  <text x="577" y="385" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">terminal upgrade may still</text>
+  <text x="577" y="399" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">lift it to waiting</text>
+  <text x="577" y="425" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">&lt;agent&gt;MarkerSource()  *</text>
+
+  <rect x="725" y="325" width="245" height="115" rx="6" fill="#F9E2AF"/>
+  <text x="847" y="348" text-anchor="middle" font-size="11" fill="#11111B" font-weight="700">log fresher  ·  has log adapter</text>
+  <text x="847" y="367" text-anchor="middle" font-size="10" fill="#11111B">log baseline</text>
+  <text x="847" y="385" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">terminal can ONLY upgrade</text>
+  <text x="847" y="399" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">to waiting · never downgrade</text>
+  <text x="847" y="425" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">terminalSource(upgradeOnly: true)</text>
+
+  <rect x="985" y="325" width="270" height="115" rx="6" fill="#F9E2AF"/>
+  <text x="1120" y="348" text-anchor="middle" font-size="11" fill="#11111B" font-weight="700">no marker, no log</text>
+  <text x="1120" y="367" text-anchor="middle" font-size="10" fill="#11111B">terminal rules only</text>
+  <text x="1120" y="385" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">default-idle when nothing</text>
+  <text x="1120" y="399" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">matches</text>
+  <text x="1120" y="425" text-anchor="middle" font-size="9" fill="#11111B" font-style="italic">terminalSource(upgradeOnly: false)</text>
+
+  <line x1="577" y1="440" x2="577" y2="475" stroke="#9399B2" stroke-width="1.5"/>
+  <line x1="847" y1="440" x2="847" y2="475" stroke="#9399B2" stroke-width="1.5"/>
+  <line x1="1120" y1="440" x2="1120" y2="475" stroke="#9399B2" stroke-width="1.5"/>
+  <line x1="577" y1="475" x2="1120" y2="475" stroke="#9399B2" stroke-width="1.5"/>
+  <line x1="850" y1="475" x2="850" y2="490" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="540" y="495" width="620" height="40" rx="6" fill="#FAB387"/>
+  <text x="850" y="520" text-anchor="middle" font-size="13" fill="#11111B" font-weight="700">session.status:  idle  ·  working  ·  waiting</text>
+
+  <text x="850" y="555" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">src/daemon/state-reconciler.ts</text>
+  <text x="850" y="572" text-anchor="middle" font-size="8" fill="#9399B2" font-style="italic">* OpenCode → openCodeMarkerSource · native / pane-tracked Claude → nativeMarkerSource · every other agent → genericMarkerSource</text>
+</svg>

@@ -1,0 +1,55 @@
+import { describe, it, expect, afterEach } from "bun:test";
+import { testRender } from "@opentui/solid";
+import { HighlightedText } from "./HighlightedText";
+
+type Setup = Awaited<ReturnType<typeof testRender>>;
+let setup: Setup;
+
+afterEach(() => {
+  setup?.renderer.destroy();
+});
+
+async function renderHighlight(text: string) {
+  setup = await testRender(
+    () => (
+      <HighlightedText text={text} highlightColor="yellow" baseColor="white" />
+    ),
+    { width: 60, height: 3 },
+  );
+  await setup.renderOnce();
+  return setup.captureCharFrame();
+}
+
+describe("HighlightedText", () => {
+  it("renders plain text without markers", async () => {
+    const frame = await renderHighlight("hello world");
+    expect(frame).toContain("hello world");
+  });
+
+  it("highlights bold segments", async () => {
+    const frame = await renderHighlight("foo<b>bar</b>baz");
+    expect(frame).toContain("foo");
+    expect(frame).toContain("bar");
+    expect(frame).toContain("baz");
+    expect(frame).not.toContain("<b>");
+    expect(frame).not.toContain("</b>");
+  });
+
+  it("renders multiple bold regions", async () => {
+    const frame = await renderHighlight("<b>a</b>x<b>b</b>");
+    expect(frame).toContain("a");
+    expect(frame).toContain("x");
+    expect(frame).toContain("b");
+  });
+
+  it("handles empty string", async () => {
+    const frame = await renderHighlight("");
+    expect(frame.trim()).toBe("");
+  });
+
+  it("renders full text as highlight", async () => {
+    const frame = await renderHighlight("<b>all bold</b>");
+    expect(frame).toContain("all bold");
+    expect(frame).not.toContain("<b>");
+  });
+});

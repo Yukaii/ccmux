@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/epilande/ccmux/security/advisories/new
+    about: Please report security issues privately, not as a public issue.
+  - name: Contributing guide
+    url: https://github.com/epilande/ccmux/blob/main/CONTRIBUTING.md
+    about: Setup, project layout, and how to open a good pull request.

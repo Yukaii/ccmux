@@ -1,0 +1,61 @@
+name: Feature Request
+description: Suggest a new feature or improvement for ccmux
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement to ccmux. Please describe the problem you are trying to solve, not just the solution you have in mind, so we can explore the design together.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched [existing issues](https://github.com/epilande/ccmux/issues) and this has not already been requested.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do, and where does ccmux get in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like ccmux to do? Describe the behavior, command, or UI you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds you are using today, or other approaches you thought about.
+    validations:
+      required: false
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Relevant agent(s)
+      description: If this request is specific to one or more agents, which?
+      multiple: true
+      options:
+        - Claude Code
+        - Codex
+        - Cursor
+        - OpenCode
+        - Pi
+        - Gemini CLI
+        - Custom agent (defined in config)
+        - Not agent-specific
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, mockups, links, or anything else that helps explain the request.
+    validations:
+      required: false

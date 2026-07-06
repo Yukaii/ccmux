@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 460" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4B5563"/>
+    </marker>
+  </defs>
+
+  <text x="115" y="42" text-anchor="middle" font-size="11" fill="#4B5563" font-weight="700" letter-spacing="2">AGENTS</text>
+  <text x="730" y="42" text-anchor="middle" font-size="11" fill="#4B5563" font-weight="700" letter-spacing="2">DAEMON  ·  port 2269</text>
+  <text x="1185" y="42" text-anchor="middle" font-size="11" fill="#4B5563" font-weight="700" letter-spacing="2">CLIENTS</text>
+
+  <rect x="30" y="65" width="170" height="40" rx="6" fill="#BFDBFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="115" y="90" text-anchor="middle" font-size="13" fill="#1E3A8A" font-weight="600">claude</text>
+  <rect x="30" y="115" width="170" height="40" rx="6" fill="#BFDBFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="115" y="140" text-anchor="middle" font-size="13" fill="#1E3A8A" font-weight="600">codex</text>
+  <rect x="30" y="165" width="170" height="40" rx="6" fill="#BFDBFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="115" y="190" text-anchor="middle" font-size="13" fill="#1E3A8A" font-weight="600">cursor</text>
+  <rect x="30" y="215" width="170" height="40" rx="6" fill="#BFDBFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="115" y="240" text-anchor="middle" font-size="13" fill="#1E3A8A" font-weight="600">opencode</text>
+  <rect x="30" y="265" width="170" height="40" rx="6" fill="#BFDBFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="115" y="290" text-anchor="middle" font-size="13" fill="#1E3A8A" font-weight="600">pi</text>
+  <rect x="30" y="315" width="170" height="40" rx="6" fill="#BFDBFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="115" y="340" text-anchor="middle" font-size="13" fill="#1E3A8A" font-weight="600">gemini</text>
+  <text x="115" y="382" text-anchor="middle" font-size="10" fill="#6B7280" font-style="italic">running in tmux panes</text>
+
+  <line x1="200" y1="85" x2="210" y2="85" stroke="#4B5563" stroke-width="1.5"/>
+  <line x1="200" y1="135" x2="210" y2="135" stroke="#4B5563" stroke-width="1.5"/>
+  <line x1="200" y1="185" x2="210" y2="185" stroke="#4B5563" stroke-width="1.5"/>
+  <line x1="200" y1="235" x2="210" y2="235" stroke="#4B5563" stroke-width="1.5"/>
+  <line x1="200" y1="285" x2="210" y2="285" stroke="#4B5563" stroke-width="1.5"/>
+  <line x1="200" y1="335" x2="210" y2="335" stroke="#4B5563" stroke-width="1.5"/>
+  <line x1="210" y1="85" x2="210" y2="335" stroke="#4B5563" stroke-width="1.5"/>
+
+  <line x1="210" y1="165" x2="500" y2="165" stroke="#4B5563" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="350" y="153" text-anchor="middle" font-size="12" fill="#4B5563" font-weight="700">hook markers</text>
+  <text x="350" y="183" text-anchor="middle" font-size="9" fill="#6B7280" font-style="italic">written by hook scripts / plugin to ~/.config/ccmux/session-pids/</text>
+
+  <line x1="210" y1="265" x2="500" y2="265" stroke="#4B5563" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="350" y="253" text-anchor="middle" font-size="12" fill="#4B5563" font-weight="700">tmux panes</text>
+  <text x="350" y="283" text-anchor="middle" font-size="9" fill="#6B7280" font-style="italic">ps  ·  list-panes  ·  capture-pane  (always-on)</text>
+
+  <rect x="500" y="60" width="460" height="340" rx="12" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+
+  <rect x="508" y="85" width="144" height="40" rx="6" fill="#DDD6FE" stroke="#8B5CF6" stroke-width="1"/>
+  <text x="580" y="103" text-anchor="middle" font-size="11" fill="#4C1D95" font-weight="600">HookManager</text>
+  <text x="580" y="118" text-anchor="middle" font-size="9" fill="#4C1D95">chokidar + adapters</text>
+
+  <rect x="658" y="85" width="144" height="40" rx="6" fill="#DDD6FE" stroke="#8B5CF6" stroke-width="1"/>
+  <text x="730" y="103" text-anchor="middle" font-size="11" fill="#4C1D95" font-weight="600">LogWatcher</text>
+  <text x="730" y="118" text-anchor="middle" font-size="9" fill="#4C1D95">JSONL tail + StatusMachine</text>
+
+  <rect x="808" y="85" width="144" height="40" rx="6" fill="#DDD6FE" stroke="#8B5CF6" stroke-width="1"/>
+  <text x="880" y="103" text-anchor="middle" font-size="11" fill="#4C1D95" font-weight="600">TerminalDetector</text>
+  <text x="880" y="118" text-anchor="middle" font-size="9" fill="#4C1D95">regex on capture-pane</text>
+
+  <path d="M 580 125 L 580 145 L 730 145" fill="none" stroke="#4B5563" stroke-width="1.5"/>
+  <path d="M 880 125 L 880 145 L 730 145" fill="none" stroke="#4B5563" stroke-width="1.5"/>
+  <line x1="730" y1="125" x2="730" y2="170" stroke="#4B5563" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="530" y="170" width="400" height="48" rx="6" fill="#FED7AA" stroke="#F97316" stroke-width="1"/>
+  <text x="730" y="192" text-anchor="middle" font-size="13" fill="#7C2D12" font-weight="700">StateReconciler  ·  SessionManager</text>
+  <text x="730" y="208" text-anchor="middle" font-size="9" fill="#7C2D12" font-style="italic">scan loop  ·  5s tick  ·  freshest-wins cascade  ·  EventEmitter</text>
+
+  <line x1="730" y1="218" x2="730" y2="262" stroke="#4B5563" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="530" y="262" width="400" height="48" rx="6" fill="#FDE68A" stroke="#EAB308" stroke-width="1"/>
+  <text x="730" y="284" text-anchor="middle" font-size="13" fill="#78350F" font-weight="700">DaemonServer</text>
+  <text x="730" y="300" text-anchor="middle" font-size="10" fill="#78350F">HTTP REST  ·  SSE /events  ·  port 2269</text>
+
+  <text x="730" y="348" text-anchor="middle" font-size="10" fill="#6B7280" font-style="italic">adapter registry: createBuiltinHookAdapters() in adapters/index.ts</text>
+  <text x="730" y="370" text-anchor="middle" font-size="10" fill="#6B7280" font-style="italic">SessionManager change event → broadcastEvent → SSE clients</text>
+
+  <text x="730" y="420" text-anchor="middle" font-size="10" fill="#6B7280" font-style="italic">spawned in background by CLI on first TUI use  ·  pid file ~/.config/ccmux/ccmux.pid</text>
+
+  <line x1="960" y1="130" x2="1000" y2="130" stroke="#4B5563" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="980" y="122" text-anchor="middle" font-size="10" fill="#4B5563" font-style="italic">SSE</text>
+
+  <line x1="960" y1="275" x2="1000" y2="275" stroke="#4B5563" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="980" y="267" text-anchor="middle" font-size="10" fill="#4B5563" font-style="italic">REST</text>
+
+  <rect x="1000" y="80" width="370" height="100" rx="8" fill="#BBF7D0" stroke="#22C55E" stroke-width="1"/>
+  <text x="1185" y="108" text-anchor="middle" font-size="14" fill="#14532D" font-weight="700">TUI clients</text>
+  <text x="1185" y="130" text-anchor="middle" font-size="11" fill="#14532D" font-weight="600">picker  ·  sidebar</text>
+  <text x="1185" y="148" text-anchor="middle" font-size="10" fill="#14532D">SolidJS + @opentui/solid</text>
+  <text x="1185" y="164" text-anchor="middle" font-size="10" fill="#14532D" font-style="italic">SSE consumer drives reactive store</text>
+
+  <rect x="1000" y="225" width="370" height="100" rx="8" fill="#BBF7D0" stroke="#22C55E" stroke-width="1"/>
+  <text x="1185" y="253" text-anchor="middle" font-size="14" fill="#14532D" font-weight="700">CLI utilities</text>
+  <text x="1185" y="275" text-anchor="middle" font-size="11" fill="#14532D" font-weight="600">show  ·  send  ·  spawn  ·  invoke  ·  switch</text>
+  <text x="1185" y="293" text-anchor="middle" font-size="11" fill="#14532D" font-weight="600">kill  ·  restart  ·  setup  ·  config  ·  daemon</text>
+  <text x="1185" y="313" text-anchor="middle" font-size="10" fill="#14532D" font-style="italic">one-shot HTTP requests</text>
+</svg>

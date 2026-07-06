@@ -1,0 +1,90 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in ccmux
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report.
+
+        The three facts that determine most ccmux triage are the **version**, the **agent**, and whether **hooks are installed**, so please fill those in even if the rest is brief.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched [existing issues](https://github.com/epilande/ccmux/issues) and this has not already been reported.
+          required: true
+        - label: I am on the latest release of ccmux, or I have confirmed the bug still happens there.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: ccmux version
+      description: Output of `ccmux --version`.
+      placeholder: "1.2.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      description: Which agent were you running when the bug occurred?
+      options:
+        - Claude Code
+        - Codex
+        - Cursor
+        - OpenCode
+        - Pi
+        - Gemini CLI
+        - Custom agent (defined in config)
+        - Multiple / not agent-specific
+    validations:
+      required: true
+  - type: dropdown
+    id: hooks
+    attributes:
+      label: Are hooks installed?
+      description: Did you run `ccmux setup` (or `ccmux setup --agent <name>`) to install hooks for this agent?
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact steps that trigger the bug.
+      placeholder: |
+        1. Run `ccmux picker`
+        2. Spawn a Codex session in a tmux pane
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS and tmux version
+      description: Your operating system plus the output of `tmux -V`.
+      placeholder: "macOS 15.5, tmux 3.5a"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and additional context
+      description: |
+        Relevant daemon output, screenshots, or `tmux capture-pane` snippets. For startup/runtime diagnostics, run `CCMUX_PERF=1 ccmux picker 2>/tmp/perf.log` and attach the log. Please redact any tokens, credentials, or private paths before pasting.
+      render: shell
+    validations:
+      required: false

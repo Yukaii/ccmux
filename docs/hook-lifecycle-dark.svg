@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9399B2"/>
+    </marker>
+  </defs>
+
+  <text x="30" y="34" font-size="13" fill="#A6ADC8" font-weight="700" letter-spacing="2">HOOK LIFECYCLE  ·  end-to-end trace</text>
+  <text x="30" y="52" font-size="10" fill="#9399B2" font-style="italic">codex example: agent boots → SessionStart → marker → adapter → enriched session → SSE</text>
+
+  <rect x="30" y="75" width="200" height="40" rx="6" fill="#89B4FA"/>
+  <text x="130" y="100" text-anchor="middle" font-size="12" fill="#11111B" font-weight="700">agent process</text>
+
+  <rect x="260" y="75" width="200" height="40" rx="6" fill="#CBA6F7"/>
+  <text x="360" y="100" text-anchor="middle" font-size="12" fill="#11111B" font-weight="700">hook script / plugin</text>
+
+  <rect x="490" y="75" width="200" height="40" rx="6" fill="#89B4FA"/>
+  <text x="590" y="100" text-anchor="middle" font-size="12" fill="#11111B" font-weight="700">markers dir</text>
+
+  <rect x="720" y="75" width="200" height="40" rx="6" fill="#CBA6F7"/>
+  <text x="820" y="100" text-anchor="middle" font-size="12" fill="#11111B" font-weight="700">HookManager + Adapter</text>
+
+  <rect x="950" y="75" width="220" height="40" rx="6" fill="#FAB387"/>
+  <text x="1060" y="100" text-anchor="middle" font-size="12" fill="#11111B" font-weight="700">SessionManager  ·  SSE</text>
+
+  <line x1="130" y1="115" x2="130" y2="690" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="360" y1="115" x2="360" y2="534" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="360" y1="551" x2="360" y2="690" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="590" y1="115" x2="590" y2="534" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="590" y1="551" x2="590" y2="690" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="820" y1="115" x2="820" y2="598" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="820" y1="617" x2="820" y2="690" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="1060" y1="115" x2="1060" y2="300" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="1060" y1="335" x2="1060" y2="406" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="1060" y1="423" x2="1060" y2="598" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="1060" y1="617" x2="1060" y2="661" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="1060" y1="678" x2="1060" y2="690" stroke="#45475A" stroke-width="1" stroke-dasharray="3,4"/>
+
+  <rect x="20" y="140" width="1170" height="22" rx="4" fill="#313244" stroke="#45475A" stroke-width="1"/>
+  <text x="40" y="156" font-size="10" fill="#A6ADC8" font-weight="700" letter-spacing="2">BOOT  ·  first hook fires</text>
+
+  <line x1="130" y1="185" x2="360" y2="185" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="245" y="178" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">SessionStart fires</text>
+  <text x="245" y="200" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">codex 0.124+: on first user message</text>
+
+  <line x1="360" y1="230" x2="590" y2="230" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="475" y="223" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">write marker (tmp + rename)</text>
+  <text x="475" y="246" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">codex-&lt;sessionId&gt;.json with pid, tty, state</text>
+
+  <line x1="590" y1="278" x2="820" y2="278" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="705" y="271" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">chokidar add event</text>
+
+  <rect x="810" y="295" width="20" height="44" rx="2" fill="#CBA6F7" opacity="0.5"/>
+  <text x="900" y="313" font-size="10" fill="#A6ADC8" font-weight="600">adapter.onMarkerAdded(marker, ctx)</text>
+  <text x="900" y="330" font-size="9" fill="#9399B2" font-style="italic">find pane-tracked session by TTY (codex)</text>
+
+  <line x1="820" y1="365" x2="1060" y2="365" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="940" y="358" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">enrich: nativeSessionId, logPath, cwd</text>
+  <text x="940" y="380" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">SessionManager.updateSession(id, ...)</text>
+
+  <line x1="1060" y1="402" x2="1180" y2="402" stroke="#9399B2" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="1110" y="395" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">SSE</text>
+  <text x="1115" y="418" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">session_updated → TUI</text>
+
+  <rect x="20" y="440" width="1170" height="22" rx="4" fill="#313244" stroke="#45475A" stroke-width="1"/>
+  <text x="40" y="456" font-size="10" fill="#A6ADC8" font-weight="700" letter-spacing="2">MID-TURN  ·  permission needed</text>
+
+  <line x1="130" y1="485" x2="360" y2="485" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="245" y="478" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">PermissionRequest fires</text>
+  <text x="245" y="500" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">codex about to run a tool needing approval</text>
+
+  <line x1="360" y1="530" x2="590" y2="530" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="475" y="523" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">overwrite marker</text>
+  <text x="475" y="546" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">state=waiting_permission · state_timestamp=now · pending_tool=Bash</text>
+
+  <line x1="590" y1="578" x2="820" y2="578" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="705" y="571" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">chokidar change event</text>
+
+  <rect x="810" y="582" width="20" height="16" rx="2" fill="#CBA6F7" opacity="0.5"/>
+
+  <line x1="820" y1="618" x2="1060" y2="618" stroke="#9399B2" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="940" y="611" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">marker event → reconcileOne(skipDebounce) applies it now → waiting</text>
+  <text x="940" y="633" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">freshest-wins fold  ·  marker &gt; log &gt; terminal</text>
+
+  <line x1="1060" y1="658" x2="1180" y2="658" stroke="#9399B2" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="1110" y="651" text-anchor="middle" font-size="10" fill="#A6ADC8" font-weight="600">SSE</text>
+  <text x="1115" y="673" text-anchor="middle" font-size="9" fill="#9399B2" font-style="italic">attention indicator on TUI row</text>
+
+  <text x="1190" y="710" text-anchor="end" font-size="9" fill="#9399B2" font-style="italic">src/daemon/hook-manager.ts  ·  session-markers.ts  ·  adapters/&lt;agent&gt;/hook-adapter.ts</text>
+</svg>

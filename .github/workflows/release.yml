@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists, skipping release"
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag v$VERSION does not exist, will release"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: bun-darwin-arm64
+            artifact: ccmux-macos-arm64
+          - target: bun-darwin-x64
+            artifact: ccmux-macos-x64
+          - target: bun-linux-x64
+            artifact: ccmux-linux-x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --os="*" --cpu="*"
+      - run: bun run build
+      # --no-compile-autoload-bunfig: keep bunfig's dev-only `preload`
+      # (@opentui/solid/preload) out of the compiled binary. build.ts already
+      # applies it; at runtime it can't resolve and crashes ("preload not found").
+      - run: bun build dist/index.js --compile --no-compile-autoload-bunfig --target=${{ matrix.target }} --outfile ${{ matrix.artifact }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  release:
+    needs: [check-version, build]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ needs.check-version.outputs.version }}
+      sha_macos_arm64: ${{ steps.checksums.outputs.sha_macos_arm64 }}
+      sha_macos_x64: ${{ steps.checksums.outputs.sha_macos_x64 }}
+      sha_linux_x64: ${{ steps.checksums.outputs.sha_linux_x64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ needs.check-version.outputs.version }}" -m "Release v${{ needs.check-version.outputs.version }}"
+          git push origin "v${{ needs.check-version.outputs.version }}"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Prepare release assets
+        run: |
+          cd dist
+          for dir in */; do
+            name="${dir%/}"
+            mv "${dir}${name}" "${name}.tmp"
+          done
+          rm -rf */
+          for f in *.tmp; do
+            mv "$f" "${f%.tmp}"
+          done
+          chmod +x ccmux-*
+          ls -la
+
+      - name: Generate checksums
+        id: checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+          echo "sha_macos_arm64=$(sha256sum ccmux-macos-arm64 | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "sha_macos_x64=$(sha256sum ccmux-macos-x64 | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "sha_linux_x64=$(sha256sum ccmux-linux-x64 | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          generate_release_notes: true
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    # Soft-fail: a tap-update hiccup must not fail the release. Needs the
+    # HOMEBREW_TAP_GITHUB_TOKEN secret (PAT with push to epilande/homebrew-tap).
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: epilande/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update Homebrew formula
+        env:
+          # Track the publishing repo so formula URLs survive the rename.
+          REPO: ${{ github.repository }}
+          VERSION: ${{ needs.release.outputs.version }}
+          SHA_MACOS_ARM64: ${{ needs.release.outputs.sha_macos_arm64 }}
+          SHA_MACOS_X64: ${{ needs.release.outputs.sha_macos_x64 }}
+          SHA_LINUX_X64: ${{ needs.release.outputs.sha_linux_x64 }}
+        run: bash scripts/update-homebrew-formula.sh homebrew-tap/Formula/ccmux.rb
+
+      - name: Commit and push formula
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/ccmux.rb
+          if git diff --staged --quiet; then
+            echo "Formula unchanged; nothing to commit."
+            exit 0
+          fi
+          git commit -m "Update ccmux to v${{ needs.release.outputs.version }}"
+          # Rebase onto any concurrent tap writes.
+          git pull --rebase
+          git push

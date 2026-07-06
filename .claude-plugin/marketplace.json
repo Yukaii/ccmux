@@ -1,0 +1,21 @@
+{
+  "name": "ccmux",
+  "description": "Marketplace for ccmux Claude Code plugins.",
+  "owner": {
+    "name": "Emmanuel Pilande"
+  },
+  "plugins": [
+    {
+      "name": "ccmux",
+      "description": "Drive the ccmux cross-harness CLI to dispatch work to other AI coding agents (Claude Code, Codex, Cursor, OpenCode, Pi, Gemini) through programmatic ccmux invoke calls. Requires the ccmux CLI on PATH.",
+      "source": "./plugins/ccmux",
+      "category": "development",
+      "version": "1.0.0",
+      "author": {
+        "name": "Emmanuel Pilande"
+      },
+      "homepage": "https://github.com/epilande/ccmux",
+      "license": "MIT"
+    }
+  ]
+}
