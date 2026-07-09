@@ -119,7 +119,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     # Soft-fail: a tap-update hiccup must not fail the release. Needs the
-    # HOMEBREW_TAP_GITHUB_TOKEN secret (PAT with push to epilande/homebrew-tap).
+    # HOMEBREW_TAP_GITHUB_TOKEN secret (PAT with push to Yukaii/homebrew-tap).
     continue-on-error: true
     steps:
       - name: Checkout
@@ -128,7 +128,7 @@ jobs:
       - name: Checkout homebrew-tap
         uses: actions/checkout@v4
         with:
-          repository: epilande/homebrew-tap
+          repository: Yukaii/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           path: homebrew-tap
 
