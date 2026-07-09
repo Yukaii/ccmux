@@ -6,8 +6,31 @@ while [ -L "$SOURCE" ]; do
   [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
 done
 export CCMUX_CALLER_PWD="$PWD"
-cd "$(cd -P "$(dirname "$SOURCE")" && pwd)/.."
+ROOT="$(cd -P "$(dirname "$SOURCE")" && pwd)/.."
+cd "$ROOT"
 
+# ── Fast-path: light picker ───────────────────────────────────
+# The picker is the default command and also the most latency-sensitive.
+# Route it directly to the lightweight ANSI picker, bypassing the heavy
+# commander + TUI framework imports entirely.
+#
+# Conditions: no arguments (default command = picker), or first arg is
+# "picker". Never intercepts --version, --help, or subcommands like
+# daemon, sidebar, status, etc.
+FIRST_ARG="${1:-}"
+if [ -z "$FIRST_ARG" ] || [ "$FIRST_ARG" = "picker" ]; then
+  if [ -z "$FIRST_ARG" ]; then
+    # No args = default command (picker), pass "picker" explicitly
+    set -- "picker" "$@"
+  fi
+  # Prefer pre-built bundle when current; fall back to source.
+  if [ -f "$ROOT/dist/picker-light.js" ] && [ -z "$(find "$ROOT/src/picker-light" "$ROOT/package.json" "$ROOT/bun.lock" "$ROOT/build.ts" -newer "$ROOT/dist/picker-light.js" -print -quit 2>/dev/null)" ]; then
+    exec bun "$ROOT/dist/picker-light.js" "$@"
+  fi
+  exec bun "$ROOT/src/picker-light/main.ts" "$@"
+fi
+
+# ── All other commands: use the full TypeScript entry ────────
 # Run from the built bundle when it is current: it skips per-launch
 # TypeScript transpilation (~150ms of the picker's warm path, measured by
 # scripts/bench-startup.ts). "Current" means nothing that feeds the build
@@ -35,6 +58,21 @@ if [ -f build.ts ]; then
     mkdir -p dist 2>/dev/null && mkdir "$LOCK" 2>/dev/null; then
     touch "$STAMP"
     (bun run build; rmdir "$LOCK") </dev/null >/dev/null 2>&1 &
+  fi
+fi
+
+# Also rebuild the light picker in the background if source changed.
+if [ -f "$ROOT/dist/picker-light.js" ] && [ -f build.ts ]; then
+  LOCK2=dist/.build-picker-lock
+  STAMP2=dist/.build-picker-stamp
+  if [ -d "$LOCK2" ] && [ -n "$(find "$LOCK2" -maxdepth 0 -mmin +10 -print -quit 2>/dev/null)" ]; then
+    rmdir "$LOCK2" 2>/dev/null
+  fi
+  if [ -n "$(find "$ROOT/src/picker-light" "$ROOT/package.json" "$ROOT/build.ts" -newer "$ROOT/dist/picker-light.js" -print -quit 2>/dev/null)" ] &&
+    [ -z "$(find "$STAMP2" -mmin -1 -print -quit 2>/dev/null)" ] &&
+    mkdir "$LOCK2" 2>/dev/null; then
+    touch "$STAMP2"
+    (bun run build; rmdir "$LOCK2") </dev/null >/dev/null 2>&1 &
   fi
 fi
 exec bun src/index.ts "$@"

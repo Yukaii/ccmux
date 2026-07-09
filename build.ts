@@ -2,43 +2,53 @@ import solidPlugin from "@opentui/solid/bun-plugin";
 import { mkdirSync, readdirSync, renameSync, rmSync, utimesSync } from "fs";
 import { join } from "path";
 
-// Build into a staging dir and rename into place. The ccmux launcher
-// treats dist/index.js's mtime as the freshness marker and may exec it
-// concurrently; an in-place write would bump the mtime at write START,
-// letting a parallel launch see a half-written bundle as current. A
-// failed build must also never replace a good bundle.
+// Build into a staging dir and rename into place, so concurrent readers
+// never see a half-written file (rename is atomic).
 const STAGING = "./dist/.staging";
 rmSync(STAGING, { recursive: true, force: true });
 
-// Captured before the build so the published bundle can be backdated to
-// it (below): an edit landing while the build runs must compare as newer
-// than the bundle, or the launcher would treat a bundle missing that edit
-// as current.
 const buildStart = new Date();
 
-const result = await Bun.build({
+// ── Build the main CLI entry (full TUI, all commands) ────────
+const mainResult = await Bun.build({
   entrypoints: ["./src/index.ts"],
   target: "bun",
   outdir: STAGING,
   plugins: [solidPlugin],
 });
 
-if (!result.success) {
-  for (const log of result.logs) console.error(log);
+if (!mainResult.success) {
+  for (const log of mainResult.logs) console.error(log);
   process.exit(1);
 }
 
 mkdirSync("./dist", { recursive: true });
-// Assets first, index.js last: asset names are content-hashed (never
-// overwritten in place), so the final rename atomically publishes a
-// bundle whose assets already exist.
-const outputs = readdirSync(STAGING).sort(
-  (a, b) => Number(a === "index.js") - Number(b === "index.js"),
-);
+
+// ── Build the lightweight picker (no framework deps) ─────────
+const pickerResult = await Bun.build({
+  entrypoints: ["./src/picker-light/main.ts"],
+  target: "bun",
+  outdir: STAGING,
+  // No solidPlugin — the light picker has no JSX/OpenTUI deps
+  naming: "[dir]/picker-light.[ext]",
+});
+
+if (!pickerResult.success) {
+  for (const log of pickerResult.logs) console.error(log);
+  process.exit(1);
+}
+
+// Move files atomically (assets first, index.js/picker-light.js last)
+const outputs = readdirSync(STAGING).sort((a, b) => {
+  const aLast = a === "index.js" || a === "picker-light.js" ? 1 : 0;
+  const bLast = b === "index.js" || b === "picker-light.js" ? 1 : 0;
+  return aLast - bLast;
+});
 for (const file of outputs) {
   renameSync(join(STAGING, file), join("./dist", file));
 }
 utimesSync("./dist/index.js", buildStart, buildStart);
+utimesSync("./dist/picker-light.js", buildStart, buildStart);
 rmSync(STAGING, { recursive: true, force: true });
 
-console.log("Build complete: dist/index.js");
+console.log("Build complete: dist/index.js, dist/picker-light.js");
