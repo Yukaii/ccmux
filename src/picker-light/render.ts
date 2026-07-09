@@ -175,13 +175,14 @@ export function render(
       out += at;
     }
     out += FG_FG + after;
-    // visible chars: 1 (leading space) + q.length
-    const n = 1 + (q.length || 1);
-    out += " ".repeat(Math.max(0, maxW - n)) + FG_BORDER + "│" + RESET + "\r\n";
   } else {
     out += FG_MUTED + "/ search";
-    out += " ".repeat(Math.max(0, maxW - 9)) + FG_BORDER + "│" + RESET + "\r\n";
   }
+  const contentLen = searchMode
+    ? (searchQuery ? truncate(searchQuery, maxW - 3).length : 1)
+    : 8;
+  out += " ".repeat(Math.max(0, maxW - 1 - contentLen));
+  out += RESET + BG_BG + FG_BORDER + "│" + RESET + "\r\n";
 
   // ── Divider ──
   out += BG_BG + FG_BORDER + "├" + "─".repeat(maxW) + "┤" + RESET + "\r\n";
