@@ -80,7 +80,6 @@ export const MARKERS_DIR = join(CCMUX_DIR, "session-pids");
 
 const CCMUX_PANE_PREFIX = "ccmux-";
 export const SIDEBAR_PANE_TITLE = "ccmux-sidebar";
-export const PICKER_PANE_TITLE = "ccmux-picker";
 
 export function isCcmuxPane(paneTitle: string | null): boolean {
   return paneTitle?.startsWith(CCMUX_PANE_PREFIX) ?? false;

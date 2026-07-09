@@ -20,7 +20,3 @@ export interface SessionInfo {
   trackingMode: string;
   /** background-agent sessions have no pane */
 }
-
-export interface DaemonSessionsResponse {
-  sessions: SessionInfo[];
-}
