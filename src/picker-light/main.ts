@@ -66,39 +66,27 @@ function groupByProject(sessions: SessionInfo[]): GroupedSessions {
   return sorted;
 }
 
-// ── Flatten with group headers ─────────────────────────────────
-interface FlatEntry {
-  kind: "group" | "session";
-  groupName?: string;
-  session?: SessionInfo;
-  sessionIndex: number; // index into filteredSessions for selection
-}
-
-function flattenGrouped(groups: GroupedSessions, sessions: SessionInfo[]): { entries: FlatEntry[]; sessionMap: number[] } {
-  const entries: FlatEntry[] = [];
-  const sessionMap: number[] = []; // flatIndex -> sessionIndex in sessions array
-  for (const [groupName, groupSessions] of groups) {
-    entries.push({ kind: "group", groupName, sessionIndex: -1 });
-    for (const s of groupSessions) {
-      const idx = sessions.indexOf(s);
-      entries.push({ kind: "session", session: s, sessionIndex: idx });
-      sessionMap.push(idx);
-    }
-  }
-  return { entries, sessionMap };
-}
-
 // ── Main ──────────────────────────────────────────────────────
-async function main(): Promise<void> {
+export async function main(): Promise<number> {
   mark("start");
 
-  // 1. Check daemon health — auto-start if needed
+  // 1. Detect standalone binary mode early — needed for daemon
+  //    auto-start (must use process.execPath, not `bun src/index.ts`).
+  const { isStandaloneBinary } = await import("../daemon/lifecycle");
+  const standalone = isStandaloneBinary(process.argv[1]);
+
+  // 2. Check daemon health — auto-start if needed
   let daemonOk = await checkHealth();
 
   if (!daemonOk) {
     writeStderr("ccmux daemon is not running. Starting...\n");
-    // Try to start daemon
-    const proc = Bun.spawn(["bun", new URL("../../src/index.ts", import.meta.url).pathname, "daemon", "start"], {
+    // Try to start daemon: in a compiled binary, re-exec ourselves;
+    // in dev mode, spawn bun with the dispatcher.
+    const daemonArgs = standalone
+      ? ["daemon", "start"]
+      : ["bun", new URL("../../src/index.ts", import.meta.url).pathname, "daemon", "start"];
+    const daemonExec = standalone ? process.execPath : "bun";
+    Bun.spawn([daemonExec, ...daemonArgs], {
       stdio: ["ignore", "ignore", "ignore"],
     });
     // Wait up to 10s for daemon to become healthy
@@ -326,7 +314,7 @@ async function main(): Promise<void> {
     }
   }
 
-  function handleCommandModeKey(bytes: Uint8Array, str: string): void {
+  function handleCommandModeKey(_bytes: Uint8Array, str: string): void {
     switch (str) {
       case "j": case "J": navigate(-1); break;
       case "k": case "K": navigate(1); break;
@@ -482,15 +470,21 @@ async function main(): Promise<void> {
     writeStderr(`[startup] ${"total".padEnd(20)} ${String(total).padStart(5)}ms\n\n`);
   }
   teardownTerminal(writeStdout);
-  process.exit(0);
+  return 0;
 }
 
-// ── Run ───────────────────────────────────────────────────────
-main().catch(async (err) => {
-  try { (process.stdin as any).setRawMode(false); } catch {}
-  const msg = `\r\nFatal: ${err instanceof Error ? err.message : String(err)}\r\n`;
-  writeStdout(SHOW_CURSOR + RESET + msg);
-  await Bun.sleep(500);
-  try { teardownTerminal(writeStdout); } catch {}
-  process.exit(1);
-});
+// ── Run (when executed directly, not imported) ────────────────
+const isDirectEntry =
+  Bun.main === import.meta.path || process.argv[1] === import.meta.path;
+if (isDirectEntry) {
+  main()
+    .then((code) => process.exit(code))
+    .catch(async (err) => {
+      try { (process.stdin as any).setRawMode(false); } catch {}
+      const msg = `\r\nFatal: ${err instanceof Error ? err.message : String(err)}\r\n`;
+      writeStdout(SHOW_CURSOR + RESET + msg);
+      await Bun.sleep(500);
+      try { teardownTerminal(writeStdout); } catch {}
+      process.exit(1);
+    });
+}

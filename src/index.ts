@@ -1,48 +1,27 @@
 #!/usr/bin/env bun
-import { Command } from "commander";
-import pkg from "../package.json" with { type: "json" };
-import { createDaemonCommand } from "./commands/daemon";
-import { createShowCommand } from "./commands/show";
-import { createDismissCommand } from "./commands/dismiss";
-import { createKillCommand } from "./commands/kill";
-import { createRestartCommand } from "./commands/restart";
-import { createSwitchCommand } from "./commands/switch";
-import { createSendCommand } from "./commands/send";
-import { createScreenCommand } from "./commands/screen";
-import { createStatusCommand } from "./commands/status";
-import { createPickerCommand } from "./commands/picker";
-import { createSetupCommand } from "./commands/setup";
-import { createDebugCommand } from "./commands/debug";
-import { createConfigCommand } from "./commands/config";
-import { createSpawnCommand } from "./commands/spawn";
-import { createInvokeCommand } from "./commands/invoke";
-import { createSidebarCommand } from "./commands/sidebar";
+/**
+ * ccmux entry point — thin dispatcher.
+ *
+ * Routes the `picker` command (and the default no-args invocations) directly
+ * to the lightweight ANSI picker (`picker-light`), avoiding the heavy
+ * OpenTUI / SolidJS import chain entirely.  All other commands are delegated
+ * to the full CLI.
+ *
+ * In a `bun build --compile` binary both paths are bundled into the same
+ * executable; only the code that is actually exercised is loaded at runtime,
+ * so the picker stays fast.
+ */
 
-const program = new Command();
+const arg = process.argv[2];
+const isPicker = !arg || arg === "picker";
 
-program
-  .name("ccmux")
-  .description(
-    "Track all your AI coding agents (Claude Code, Codex, Cursor, ...) in tmux and jump to the one that needs you",
-  )
-  .version(pkg.version);
+if (isPicker) {
+  const { main } = await import("./picker-light/main");
+  const exitCode = await main();
+  process.exit(exitCode ?? 0);
+}
 
-// Register commands
-program.addCommand(createDaemonCommand());
-program.addCommand(createShowCommand());
-program.addCommand(createDismissCommand());
-program.addCommand(createKillCommand());
-program.addCommand(createRestartCommand());
-program.addCommand(createSwitchCommand());
-program.addCommand(createSendCommand());
-program.addCommand(createScreenCommand());
-program.addCommand(createStatusCommand());
-program.addCommand(createPickerCommand(), { isDefault: true });
-program.addCommand(createSetupCommand());
-program.addCommand(createDebugCommand());
-program.addCommand(createConfigCommand());
-program.addCommand(createSpawnCommand());
-program.addCommand(createInvokeCommand());
-program.addCommand(createSidebarCommand());
+// All other commands → full CLI (commander + OpenTUI)
+await import("./cli");
 
-program.parse();
+export {};
