@@ -432,6 +432,7 @@ async function main(): Promise<void> {
   }
 
   // ── Initial render ─────────────────────────────────────────
+  clampSelection();
   mark("first_render");
   draw();
 
