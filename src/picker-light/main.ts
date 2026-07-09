@@ -136,7 +136,7 @@ async function main(): Promise<void> {
 
   // 4. State
   let filteredSessions: SessionInfo[] = allSessions;
-  let selectedIndex = 0;
+  let selectedIndex = filteredSessions.length > 0 ? 0 : -1;
   let scrollOffset = 0;
   let searchQuery = "";
   let searchCursor = 0;
@@ -432,6 +432,8 @@ async function main(): Promise<void> {
   }
 
   // ── Initial render ─────────────────────────────────────────
+  selectedIndex = filteredSessions.length > 0 ? 0 : -1;
+  scrollOffset = 0;
   clampSelection();
   mark("first_render");
   draw();

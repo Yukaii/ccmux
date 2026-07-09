@@ -178,15 +178,16 @@ export function render(
 
   if (view.kind === "grouped" && useGrouping) {
     flatEntries = [];
+    let idx = 0;
     for (const [name, sessions] of view.groups) {
       flatEntries.push({ kind: "group", groupName: name, groupCount: sessions.length, sessionIndex: -1 });
       for (const s of sessions) {
-        flatEntries.push({ kind: "session", session: s, sessionIndex: filtered.indexOf(s) });
+        flatEntries.push({ kind: "session", session: s, sessionIndex: idx++ });
       }
     }
   } else {
-    flatEntries = filtered.map((s) => ({
-      kind: "session", session: s, sessionIndex: filtered.indexOf(s),
+    flatEntries = filtered.map((s, i) => ({
+      kind: "session", session: s, sessionIndex: i,
     }));
   }
 
