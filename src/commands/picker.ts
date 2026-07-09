@@ -28,6 +28,8 @@ export function resolvePersistent(
 export function createPickerCommand(): Command {
   return new Command("picker")
     .description("Launch the session picker")
+    .option("--persistent", "Keep the picker open after switching")
+    .option("--no-persistent", "Close the picker after switching")
     .action(async () => {
       const { isStandaloneBinary } = await import(
         "../daemon/lifecycle"
