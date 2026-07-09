@@ -1,0 +1,13 @@
+{
+  "tag": "picker-light",
+  "date": "2026-07-09T16:18:03.749Z",
+  "runs": 5,
+  "successful": 5,
+  "medians": {
+    "start": 0,
+    "health_check": 5,
+    "fetch_sessions": 6,
+    "terminal_ready": 6,
+    "first_render": 9
+  }
+}

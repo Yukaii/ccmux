@@ -15,12 +15,16 @@
 
 import { checkHealth, fetchSessions } from "./daemon";
 import { search } from "./fuzzy";
+import { resolveTheme } from "./theme";
 import {
   setupTerminal,
   teardownTerminal,
+  setPalette,
   render,
   writeStdout,
   writeStderr,
+  RESET,
+  SHOW_CURSOR,
   type RenderState,
   type GroupedView,
 } from "./render";
@@ -115,6 +119,9 @@ async function main(): Promise<void> {
   let allSessions = await fetchSessions();
   mark("fetch_sessions");
 
+  // Resolve theme from config (before first render)
+  setPalette(await resolveTheme());
+
   if (PERF) {
     writeStderr(`[startup] sessions_fetched           ${allSessions.length} sessions\n`);
   }
@@ -202,19 +209,18 @@ async function main(): Promise<void> {
     const session = filteredSessions[selectedIndex]!;
     const target = session.tmuxTarget || session.tmuxPane;
     if (target) {
+      running = false;
       stdin.removeAllListeners("data");
       try { (stdin as any).setRawMode(false); } catch {}
-      teardownTerminal(writeStdout);
-      Bun.spawn(["tmux", "switch-client", "-t", target], {
+      // Use spawnSync so tmux switch completes before we tear down the terminal
+      Bun.spawnSync(["tmux", "switch-client", "-t", target], {
         stdio: ["ignore", "ignore", "ignore"],
       });
+      teardownTerminal(writeStdout);
       process.exit(0);
+      return;
     }
-    // Background session with no pane — just exit
-    stdin.removeAllListeners("data");
-    try { (stdin as any).setRawMode(false); } catch {}
-    teardownTerminal(writeStdout);
-    process.exit(0);
+    running = false;
   }
 
   // ── Setup raw mode stdin ───────────────────────────────────

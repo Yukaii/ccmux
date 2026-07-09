@@ -1,0 +1,68 @@
+{
+  "tag": "baseline-v1",
+  "date": "2026-07-09T16:12:03.433Z",
+  "runs": 5,
+  "successful": 5,
+  "medians": {
+    "cli_parse": 0,
+    "parallel_init": 305,
+    "daemon_ready": 305,
+    "render_start": 305,
+    "store_created": 315,
+    "sse_connected": 321,
+    "first_data": 326,
+    "total": 326
+  },
+  "raw": [
+    {
+      "cli_parse": 0,
+      "parallel_init": 332,
+      "daemon_ready": 332,
+      "render_start": 332,
+      "store_created": 344,
+      "sse_connected": 353,
+      "first_data": 383,
+      "total": 383
+    },
+    {
+      "cli_parse": 0,
+      "parallel_init": 280,
+      "daemon_ready": 280,
+      "render_start": 280,
+      "store_created": 289,
+      "sse_connected": 294,
+      "first_data": 299,
+      "total": 299
+    },
+    {
+      "cli_parse": 0,
+      "parallel_init": 326,
+      "daemon_ready": 326,
+      "render_start": 326,
+      "store_created": 334,
+      "sse_connected": 340,
+      "first_data": 345,
+      "total": 345
+    },
+    {
+      "cli_parse": 0,
+      "parallel_init": 305,
+      "daemon_ready": 305,
+      "render_start": 305,
+      "store_created": 315,
+      "sse_connected": 321,
+      "first_data": 326,
+      "total": 326
+    },
+    {
+      "cli_parse": 0,
+      "parallel_init": 273,
+      "daemon_ready": 273,
+      "render_start": 274,
+      "store_created": 282,
+      "sse_connected": 288,
+      "first_data": 293,
+      "total": 293
+    }
+  ]
+}
