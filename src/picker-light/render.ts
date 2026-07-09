@@ -178,8 +178,11 @@ export function render(
   } else {
     out += FG_MUTED + "/ search";
   }
-  const visLen = (searchMode || searchQuery) ? truncate(searchQuery || "", maxW - 3).length : 8;
-  out += " ".repeat(Math.max(1, maxW - 1 - visLen));
+  // Pad to exactly maxW visible characters
+  const contentLen = searchMode
+    ? (searchQuery ? truncate(searchQuery, maxW - 3).length : 1) // cursor char when empty
+    : 8; // "/ search"
+  out += " ".repeat(maxW - 1 - contentLen);
   out += RESET + BG_BG + FG_BORDER + "│" + RESET + "\r\n";
 
   // ── Divider ──
