@@ -94,7 +94,6 @@ async function main(): Promise<void> {
 
   // 1. Check daemon health — auto-start if needed
   let daemonOk = await checkHealth();
-  mark("health_check");
 
   if (!daemonOk) {
     writeStderr("ccmux daemon is not running. Starting...\n");
@@ -114,13 +113,16 @@ async function main(): Promise<void> {
       process.exit(1);
     }
   }
+  mark("health_check");
 
-  // 2. Fetch sessions
-  let allSessions = await fetchSessions();
+  // 2. Fetch sessions + resolve theme in parallel
+  const [sessions, palette] = await Promise.all([
+    fetchSessions(),
+    resolveTheme(),
+  ]);
+  let allSessions = sessions;
+  setPalette(palette);
   mark("fetch_sessions");
-
-  // Resolve theme from config (before first render)
-  setPalette(await resolveTheme());
 
   if (PERF) {
     writeStderr(`[startup] sessions_fetched           ${allSessions.length} sessions\n`);
@@ -165,14 +167,8 @@ async function main(): Promise<void> {
     if (!searchQuery.trim()) {
       filteredSessions = allSessions;
     } else {
-      // Fire-and-forget async search; if results arrive after next draw, re-draw.
-      search(allSessions, searchQuery).then((results) => {
-        filteredSessions = results.map((r) => r.session);
-        clampSelection();
-        draw();
-      });
-      // Keep current filtered list until results arrive
-      return;
+      const results = search(allSessions, searchQuery);
+      filteredSessions = results.map((r) => r.session);
     }
     clampSelection();
   }

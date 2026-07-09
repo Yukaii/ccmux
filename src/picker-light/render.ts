@@ -20,7 +20,27 @@ function bg(c: [number, number, number]) { return `${CSI}48;2;${c[0]};${c[1]};${
 
 // ── Active palette ────────────────────────────────────────────
 let P: Palette = DEFAULT_PALETTE;
-export function setPalette(p: Palette): void { P = p; }
+
+// Cached ANSI codes for the active palette (recomputed on setPalette)
+let FG_BORDER = ""; let BG_BG = ""; let FG_FG = ""; let FG_MUTED = "";
+let BG_ACCENT = ""; let FG_BG = ""; let BG_SURFACE = "";
+let BG_SELECTED = ""; let FG_GREEN = ""; let FG_YELLOW = "";
+let FG_RED = ""; let FG_PURPLE = ""; let FG_CYAN = "";
+let FG_ACCENT = ""; let FG_ORANGE = "";
+
+function cachePalette(): void {
+  BG_BG = bg(P.bg); FG_BORDER = fg(P.border);
+  FG_FG = fg(P.fg); FG_MUTED = fg(P.muted);
+  BG_ACCENT = bg(P.accent); FG_BG = fg(P.bg);
+  BG_SURFACE = bg(P.surface); BG_SELECTED = bg(P.selected);
+  FG_GREEN = fg(P.green); FG_YELLOW = fg(P.yellow);
+  FG_RED = fg(P.red); FG_PURPLE = fg(P.purple);
+  FG_CYAN = fg(P.cyan); FG_ACCENT = fg(P.accent);
+  FG_ORANGE = fg(P.orange);
+}
+
+export function setPalette(p: Palette): void { P = p; cachePalette(); }
+cachePalette(); // init with default
 
 // ── Agent display ─────────────────────────────────────────────
 const AGENT_SHORT: Record<string, string> = {
@@ -75,8 +95,8 @@ function renderRow(
   maxW: number,
 ): string {
   const isBg = session.trackingMode === "background";
-  const rb = isSelected ? bg(P.selected) : (isBg ? bg(P.surface) : "");
-  const fgc = isSelected ? fg(P.fg) : (isBg ? fg(P.muted) : fg(P.muted));
+  const rb = isSelected ? BG_SELECTED : (isBg ? BG_SURFACE : "");
+  const fgc = isSelected ? FG_FG : (isBg ? FG_MUTED : FG_MUTED);
   const sf = isBg ? DIM : "";
   const si = statusIcon(session);
 
@@ -93,10 +113,10 @@ function renderRow(
   ];
 
   if (session.gitBranch) {
-    parts.push(` ${DIM}${fg(P.cyan)}${truncate(session.gitBranch, 18)}${RESET}${rb}${sf}`);
+    parts.push(` ${DIM}${FG_CYAN}${truncate(session.gitBranch, 18)}${RESET}${rb}${sf}`);
   }
   if (isBg) {
-    parts.push(` ${DIM}${fg(P.muted)}[bg]${RESET}${rb}`);
+    parts.push(` ${DIM}${FG_MUTED}[bg]${RESET}${rb}`);
   }
 
   const left = parts.join("");
@@ -120,7 +140,7 @@ function renderRow(
 // ── Group header ──────────────────────────────────────────────
 function renderGroupHeader(name: string, count: number, maxW: number): string {
   const text = `▸ ${name} (${count})`;
-  return `${fg(P.accent)}${BOLD}${text}${RESET}${" ".repeat(Math.max(0, maxW - text.length))}`;
+  return `${FG_ACCENT}${BOLD}${text}${RESET}${" ".repeat(Math.max(0, maxW - text.length))}`;
 }
 
 // ── Main render ───────────────────────────────────────────────
@@ -139,32 +159,32 @@ export function render(
   let out = CURSOR_HOME;
 
   // ── Top border ──
-  out += bg(P.bg) + fg(P.border);
+  out += BG_BG + FG_BORDER;
   out += "┌" + "─".repeat(maxW) + "┐" + RESET + "\r\n";
 
   // ── Search bar ──
-  out += bg(P.bg) + fg(P.border) + "│" + RESET + bg(P.bg) + " ";
+  out += BG_BG + FG_BORDER + "│" + RESET + BG_BG + " ";
   if (searchMode || searchQuery) {
     const q = truncate(searchQuery, maxW - 3);
     const before = q.slice(0, searchCursor);
     const at = q.slice(searchCursor, searchCursor + 1) || " ";
     const after = q.slice(searchCursor + 1);
-    out += fg(P.fg) + before;
+    out += FG_FG + before;
     if (searchMode) {
-      out += bg(P.accent) + fg(P.bg) + at + RESET + bg(P.bg);
+      out += BG_ACCENT + FG_BG + at + RESET + BG_BG;
     } else {
       out += at;
     }
-    out += fg(P.fg) + after;
+    out += FG_FG + after;
   } else {
-    out += fg(P.muted) + "/ search";
+    out += FG_MUTED + "/ search";
   }
   const visLen = (searchMode || searchQuery) ? truncate(searchQuery || "", maxW - 3).length : 8;
   out += " ".repeat(Math.max(1, maxW - 1 - visLen));
-  out += RESET + bg(P.bg) + fg(P.border) + "│" + RESET + "\r\n";
+  out += RESET + BG_BG + FG_BORDER + "│" + RESET + "\r\n";
 
   // ── Divider ──
-  out += bg(P.bg) + fg(P.border) + "├" + "─".repeat(maxW) + "┤" + RESET + "\r\n";
+  out += BG_BG + FG_BORDER + "├" + "─".repeat(maxW) + "┤" + RESET + "\r\n";
 
   // ── Build flat list ──
   interface FlatEntry {
@@ -196,47 +216,47 @@ export function render(
     const msg = emptyText;
     const pad = Math.floor((maxW - msg.length) / 2);
     for (let i = 0; i < listHeight; i++) {
-      out += bg(P.bg) + fg(P.border) + "│" + RESET;
+      out += BG_BG + FG_BORDER + "│" + RESET;
       if (i === Math.floor(listHeight / 2)) {
-        out += bg(P.bg) + " ".repeat(Math.max(0, pad)) + fg(P.muted) + msg + RESET;
-        out += bg(P.bg) + " ".repeat(Math.max(0, maxW - pad - msg.length));
+        out += BG_BG + " ".repeat(Math.max(0, pad)) + FG_MUTED + msg + RESET;
+        out += BG_BG + " ".repeat(Math.max(0, maxW - pad - msg.length));
       } else {
-        out += bg(P.bg) + " ".repeat(maxW);
+        out += BG_BG + " ".repeat(maxW);
       }
-      out += fg(P.border) + "│" + RESET + "\r\n";
+      out += FG_BORDER + "│" + RESET + "\r\n";
     }
   } else {
     const end = Math.min(flatEntries.length, scrollOffset + listHeight);
     for (let i = scrollOffset; i < end; i++) {
       const entry = flatEntries[i]!;
-      out += bg(P.bg) + fg(P.border) + "│" + RESET;
+      out += BG_BG + FG_BORDER + "│" + RESET;
       if (entry.kind === "group") {
-        out += bg(P.bg) + " " + renderGroupHeader(entry.groupName!, entry.groupCount!, maxW - 1);
+        out += BG_BG + " " + renderGroupHeader(entry.groupName!, entry.groupCount!, maxW - 1);
       } else {
         const isSel = entry.sessionIndex === selectedIndex;
         out += renderRow(entry.session!, isSel, 1, maxW);
       }
-      out += bg(P.bg) + fg(P.border) + "│" + RESET + "\r\n";
+      out += BG_BG + FG_BORDER + "│" + RESET + "\r\n";
     }
     for (let i = end - scrollOffset; i < listHeight; i++) {
-      out += bg(P.bg) + fg(P.border) + "│" + " ".repeat(maxW) + "│" + RESET + "\r\n";
+      out += BG_BG + FG_BORDER + "│" + " ".repeat(maxW) + "│" + RESET + "\r\n";
     }
   }
 
   // ── Divider ──
-  out += bg(P.bg) + fg(P.border) + "├" + "─".repeat(maxW) + "┤" + RESET + "\r\n";
+  out += BG_BG + FG_BORDER + "├" + "─".repeat(maxW) + "┤" + RESET + "\r\n";
 
   // ── Footer ──
   const groupingLabel = useGrouping ? "g:flat" : "g:group";
   const modeLabel = searchMode ? "esc:exit" : "/:search";
   const footer = `${filtered.length} sessions │ ${groupingLabel} │ j/k:nav  ${modeLabel}  enter:select  q:quit`;
   const padFt = Math.max(0, maxW - 2 - footer.length);
-  out += bg(P.bg) + fg(P.border) + "│ " + RESET;
-  out += bg(P.bg) + fg(P.muted) + footer + " ".repeat(padFt) + RESET;
-  out += bg(P.bg) + fg(P.border) + " │" + RESET + "\r\n";
+  out += BG_BG + FG_BORDER + "│ " + RESET;
+  out += BG_BG + FG_MUTED + footer + " ".repeat(padFt) + RESET;
+  out += BG_BG + FG_BORDER + " │" + RESET + "\r\n";
 
   // ── Bottom ──
-  out += bg(P.bg) + fg(P.border) + "└" + "─".repeat(maxW) + "┘" + RESET;
+  out += BG_BG + FG_BORDER + "└" + "─".repeat(maxW) + "┘" + RESET;
   out += CURSOR_TO(2, 3 + (searchQuery ? Math.min(searchCursor, searchQuery.length) : 0));
 
   writer(out);
