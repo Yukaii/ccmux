@@ -148,6 +148,13 @@ async function main(): Promise<void> {
   function buildGroupedView(): GroupedView {
     if (useGrouping && !searchQuery.trim()) {
       const groups = groupByProject(filteredSessions);
+      // Reorder filteredSessions to match display order so
+      // selectedIndex stays consistent with the render.
+      const reordered: SessionInfo[] = [];
+      for (const sessions of groups.values()) {
+        reordered.push(...sessions);
+      }
+      filteredSessions = reordered;
       return { kind: "grouped", groups };
     }
     return { kind: "flat", sessions: filteredSessions };
