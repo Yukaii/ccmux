@@ -13,6 +13,7 @@ export const HIDE_CURSOR = `${CSI}?25l`;
 export const SHOW_CURSOR = `${CSI}?25h`;
 export const CLEAR_SCREEN = `${CSI}2J`;
 export const CURSOR_HOME = `${CSI}H`;
+const CURSOR_TO = (row: number, col: number) => `${CSI}${row};${col}H`;
 
 function fg(c: [number, number, number]) { return `${CSI}38;2;${c[0]};${c[1]};${c[2]}m`; }
 function bg(c: [number, number, number]) { return `${CSI}48;2;${c[0]};${c[1]};${c[2]}m`; }
@@ -256,6 +257,12 @@ export function render(
 
   // ── Bottom ──
   out += BG_BG + FG_BORDER + "└" + "─".repeat(maxW) + "┘" + RESET;
+
+  // Position physical cursor on the search bar when in search mode
+  if (searchMode) {
+    const col = 3 + Math.min(searchCursor, searchQuery.length);
+    out += CURSOR_TO(2, col);
+  }
 
   writer(out);
 }
