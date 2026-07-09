@@ -33,7 +33,6 @@ export function search(
 
   const results = fuzzysort.go(query, targets, {
     key: "searchText",
-    allowTypo: true,
     limit: 100,
   });
 

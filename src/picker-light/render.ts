@@ -23,19 +23,15 @@ let P: Palette = DEFAULT_PALETTE;
 // Cached ANSI codes for the active palette (recomputed on setPalette)
 let FG_BORDER = ""; let BG_BG = ""; let FG_FG = ""; let FG_MUTED = "";
 let BG_ACCENT = ""; let FG_BG = ""; let BG_SURFACE = "";
-let BG_SELECTED = ""; let FG_GREEN = ""; let FG_YELLOW = "";
-let FG_RED = ""; let FG_PURPLE = ""; let FG_CYAN = "";
-let FG_ACCENT = ""; let FG_ORANGE = "";
+let BG_SELECTED = ""; let FG_CYAN = "";
+let FG_ACCENT = "";
 
 function cachePalette(): void {
   BG_BG = bg(P.bg); FG_BORDER = fg(P.border);
   FG_FG = fg(P.fg); FG_MUTED = fg(P.muted);
   BG_ACCENT = bg(P.accent); FG_BG = fg(P.bg);
   BG_SURFACE = bg(P.surface); BG_SELECTED = bg(P.selected);
-  FG_GREEN = fg(P.green); FG_YELLOW = fg(P.yellow);
-  FG_RED = fg(P.red); FG_PURPLE = fg(P.purple);
   FG_CYAN = fg(P.cyan); FG_ACCENT = fg(P.accent);
-  FG_ORANGE = fg(P.orange);
 }
 
 export function setPalette(p: Palette): void { P = p; cachePalette(); }
