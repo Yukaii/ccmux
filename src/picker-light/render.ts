@@ -179,7 +179,7 @@ export function render(
     out += FG_MUTED + "/ search";
   }
   const contentLen = searchMode
-    ? (searchQuery ? truncate(searchQuery, maxW - 3).length : 1)
+    ? (searchQuery ? truncate(searchQuery, maxW - 3).length + 1 : 1) // +1 for cursor char
     : 8;
   out += " ".repeat(Math.max(0, maxW - 1 - contentLen));
   out += RESET + BG_BG + FG_BORDER + "│" + RESET + "\r\n";
