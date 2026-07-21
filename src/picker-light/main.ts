@@ -13,6 +13,8 @@
  * Usage: bun src/picker-light/main.ts
  */
 
+import { spawn } from "child_process";
+import { dirname, join } from "path";
 import { checkHealth, fetchSessions } from "./daemon";
 import { search } from "./fuzzy";
 import { resolveTheme } from "./theme";
@@ -37,6 +39,48 @@ function mark(label: string) {
   if (!PERF) return;
   const ms = Math.round((Bun.nanoseconds() - t0) / 1_000_000);
   writeStderr(`[startup] ${label.padEnd(20)} ${String(ms).padStart(5)}ms\n`);
+}
+
+/**
+ * Spawn the full CLI's `daemon start` in a detached process group so the
+ * picker can exit without taking the daemon with it.
+ */
+async function startDetachedDaemon(): Promise<void> {
+  const { isStandaloneBinary } = await import("../daemon/lifecycle");
+  const argv1 = process.argv[1] ?? "";
+
+  let daemonExec: string;
+  let daemonArgs: string[];
+
+  if (isStandaloneBinary(argv1)) {
+    // Compiled binary: re-exec ourselves.
+    daemonExec = process.execPath;
+    daemonArgs = ["daemon", "start"];
+  } else if (
+    argv1.endsWith("/index.ts") ||
+    argv1.endsWith("\\index.ts") ||
+    argv1.endsWith("/index.js") ||
+    argv1.endsWith("\\index.js")
+  ) {
+    // Loaded by the dispatcher (bun src/index.ts picker / bun dist/index.js picker).
+    daemonExec = process.execPath;
+    daemonArgs = [argv1, "daemon", "start"];
+  } else {
+    // We are the picker-light bundle itself; derive the full CLI entry next to us.
+    const base = dirname(argv1);
+    const isBuilt = argv1.endsWith(".js");
+    const cliEntry = isBuilt
+      ? join(base, "index.js")
+      : join(base, "..", "index.ts");
+    daemonExec = "bun";
+    daemonArgs = [cliEntry, "daemon", "start"];
+  }
+
+  const child = spawn(daemonExec, daemonArgs, {
+    detached: true,
+    stdio: ["ignore", "ignore", "ignore"],
+  });
+  child.unref();
 }
 
 // ── Grouping ───────────────────────────────────────────────────
@@ -70,25 +114,12 @@ function groupByProject(sessions: SessionInfo[]): GroupedSessions {
 export async function main(): Promise<number> {
   mark("start");
 
-  // 1. Detect standalone binary mode early — needed for daemon
-  //    auto-start (must use process.execPath, not `bun src/index.ts`).
-  const { isStandaloneBinary } = await import("../daemon/lifecycle");
-  const standalone = isStandaloneBinary(process.argv[1]);
-
-  // 2. Check daemon health — auto-start if needed
+  // 1. Check daemon health — auto-start if needed
   let daemonOk = await checkHealth();
 
   if (!daemonOk) {
     writeStderr("ccmux daemon is not running. Starting...\n");
-    // Try to start daemon: in a compiled binary, re-exec ourselves;
-    // in dev mode, spawn bun with the dispatcher.
-    const daemonArgs = standalone
-      ? ["daemon", "start"]
-      : ["bun", new URL("../../src/index.ts", import.meta.url).pathname, "daemon", "start"];
-    const daemonExec = standalone ? process.execPath : "bun";
-    Bun.spawn([daemonExec, ...daemonArgs], {
-      stdio: ["ignore", "ignore", "ignore"],
-    });
+    await startDetachedDaemon();
     // Wait up to 10s for daemon to become healthy
     const deadline = Date.now() + 10000;
     while (Date.now() < deadline) {

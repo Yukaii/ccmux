@@ -982,6 +982,9 @@ export class Daemon {
 
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
+    // Ignore SIGHUP so the daemon survives the closing terminal / tmux
+    // popup that launched it (auto-start from the picker, etc.).
+    process.on("SIGHUP", () => {});
   }
 
   getSessionManager(): SessionManager {
