@@ -347,8 +347,8 @@ export async function main(): Promise<number> {
 
   function handleCommandModeKey(_bytes: Uint8Array, str: string): void {
     switch (str) {
-      case "j": case "J": case "\x0e": navigate(-1); break;  // j / Ctrl-N
-      case "k": case "K": case "\x10": navigate(1); break;   // k / Ctrl-P
+      case "j": case "J": case "\x0e": navigate(1); break;   // j / Ctrl-N (down)
+      case "k": case "K": case "\x10": navigate(-1); break;  // k / Ctrl-P (up)
       case "g": case "G": toggleGrouping(); break;
       case "q": case "Q": running = false; break;
       case "/":
